@@ -99,7 +99,14 @@ class SingleLightController:
 
     def set_mode(self, mode):
         """Change between strong mode and weak mode by passing "strong"
-        or "weak"."""
+        or "weak".
+
+        Strong mode uses hardware PWM, which is very stable and has a high
+        degree of tuneability, but is only avalible on two channels on the RPI.
+
+        Weak mode uses software PWM that is worse, but avalible on all GPIO
+        pins on the raspberry pi.
+        """
         self.mode = mode
         if mode == "strong":
             SingleLightController.pi.hardware_PWM(self.channel,
@@ -122,13 +129,18 @@ class SingleLightController:
         self.frequency = frequency
 
 class LightController:
+    """"Light controller object.
+
+    This object accepts a list of "SimpleLightController" objects and uses them
+    to control the list as a set. As many SimpleLightControllers as you want
+    can be fed into this object, but they must be fed as a list.
+
+    The object also accepts a fan_pin, which is the GPIO pin that a bianary
+    on/off fan is connected too. When the lights are on, the fan is on. When
+    the lights are off, the fan is off.
+    """
 
     def __init__(self, light_objects, fan_pin=4):
-        """"Light controller.
-
-        fan_pin is the GPIO pin that the fan is contorlled on.
-        light_objects is a list of light controller objects that
-        can be controlled by this program. Must be input as a list."""
         self._fan_pin = fan_pin
         self.light_objects = light_objects
         self.mode_ix = 0
@@ -138,12 +150,14 @@ class LightController:
         self.turn_off()
 
     def _check_fan(self):
+        """"Check to see if light is on/off and turn on/off fan accordingly."""
         if self.brightness == 0:
             self.light_objects[0].pi.write(self._fan_pin, 0)
         else:
             self.light_objects[0].pi.write(self._fan_pin, 1)
 
     def turn_off(self):
+        """Turn off all lights and fan."""
         self.last_brightness = self.brightness
         for x in self.light_objects:
             x.set_level(0, 0)
@@ -151,12 +165,14 @@ class LightController:
         self._check_fan()
 
     def power_toggle(self):
+        """Toggle between off and last brightness setting."""
         if self.brightness == 0:
             self.level(self.last_brightness)
         else:
             self.turn_off()
 
     def add_light_object(self, light_object):
+        """Add another SimpleLightController object."""
         self.light_objects.append(light_object)
 
     def level(self, level, transition_time=0.2):
@@ -166,6 +182,7 @@ class LightController:
         self._check_fan()
 
     def toggle_mode(self):
+        """Toggle between the different avalible light controllers."""
         self.light_objects[self.mode_ix].set_level(0, 0)
         if self.mode_ix == len(self.light_objects) - 1:
             self.mode_ix = 0
