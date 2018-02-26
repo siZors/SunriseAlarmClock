@@ -10,9 +10,9 @@ class SingleLightController:
     should be a GPIO channel, the frequency is given in HZ, and the mode should
     either "strong" or "weak", and referers to the type of PWM that is used.
 
-    Strong mode has more stable pulses and a finer selection of duty cycles, but
-    is limited to two channels, while the weak mode can be run on all 31 GPIO
-    pins.
+    Strong mode has more stable pulses and a finer selection of duty cycles,
+    but is limited to two channels, while the weak mode can be run on all 31
+    GPIO pins.
     """
 
     def __init__(self, channel, frequency=20000, mode="strong"):
@@ -21,7 +21,8 @@ class SingleLightController:
         self.brightness = 0
         SingleLightController.pi = pigpio.pi()
         # Set pull down resistor for N-type MOSFET transistor
-        SingleLightController.pi.set_pull_up_down(self.channel, pigpio.PUD_DOWN)
+        SingleLightController.pi.set_pull_up_down(self.channel,
+                                                  pigpio.PUD_DOWN)
         self.set_mode(mode)
 
     def _intensity_log(func):
@@ -44,7 +45,7 @@ class SingleLightController:
 
         # Note that self.brightness refers to the old brightness level until it
         # is redefined at the end of the function.
-        new_level = 10000*new_level  # Convert from 1-100 to 1M
+        new_level = 10000 * new_level  # Convert from 1-100 to 1M
         old_level = self.brightness
         change = new_level - old_level
 
@@ -72,8 +73,8 @@ class SingleLightController:
 
         # Note that self.brightness refers to the old brightness level until it
         # is redefined at the end of the function.
-        new_level = 100*new_level  # Convert from 1-100 to 10000
-        old_level = self.brightness/100 # Convert from 1-1M to 10000
+        new_level = 100 * new_level  # Convert from 1-100 to 10000
+        old_level = self.brightness / 100  # Convert from 1-1M to 10000
         change = new_level - old_level
 
         start_time = time.process_time()
@@ -89,7 +90,7 @@ class SingleLightController:
         # Ensure that the final brightness is the given setpoint:
         SingleLightController.pi.set_PWM_dutycycle(
             self.channel, int(new_level))
-        self.brightness = new_level*100
+        self.brightness = new_level * 100
 
     def set_level(self, new_level, transition_time=1):
         if self.mode == "strong":
@@ -110,12 +111,13 @@ class SingleLightController:
         self.mode = mode
         if mode == "strong":
             SingleLightController.pi.hardware_PWM(self.channel,
-                                            self.frequency,
-                                            self.brightness)
+                                                  self.frequency,
+                                                  self.brightness)
         elif mode == "weak":
             SingleLightController.pi.set_PWM_range(self.channel, 10000)
-            SingleLightController.pi.set_PWM_dutycycle(self.channel,
-                                                 int(self.brightness/100))
+            SingleLightController.pi.set_PWM_dutycycle(
+                self.channel,
+                int(self.brightness / 100))
         else:
             raise ValueError
 
@@ -124,9 +126,10 @@ class SingleLightController:
         SingleLightController.pi.set_PWM_frequency(self.channel, frequency)
         if self.mode == "strong":
             SingleLightController.pi.hardware_PWM(self.channel,
-                                            frequency,
-                                            self.brightness)
+                                                  frequency,
+                                                  self.brightness)
         self.frequency = frequency
+
 
 class LightController:
     """"Light controller object.
@@ -177,6 +180,10 @@ class LightController:
 
     def level(self, level, transition_time=0.2):
         """Set brightness level."""
+        if level > 100:
+            level = 100
+        elif level < 0:
+            level = 0
         self.light_objects[self.mode_ix].set_level(level, transition_time)
         self.brightness = level
         self._check_fan()
